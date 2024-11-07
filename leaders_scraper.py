@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-import string
+import re
 
 def get_leaders():
 
@@ -40,34 +40,24 @@ def get_leaders():
 leaders_per_country = get_leaders()
 # print(leaders_per_country)
 
+def is_arabic(text):
+    return bool(re.search(r'[\u0600-\u06FF]', text))
+
 def get_first_paragraph(wikipedia_url):
-    leader_first_name = None
-
-    for country_code, leaders in leaders_per_country.items():
-        for leader in leaders:
-            if leader['wikipedia_url'] == wikipedia_url:
-                leader_first_name = leader['first_name']
-                break
-        if leader_first_name:
-                break
-        
-    if not leader_first_name:
-         print("Leader not found for this URL.")
-         return None
-
-    print(wikipedia_url)
-
     req_leader_wiki_url = requests.get(wikipedia_url)
     soup = BeautifulSoup(req_leader_wiki_url.content, 'html.parser')
+    paragraphs = soup.find_all("p")
 
-    paragraphs = [p.text for p in soup.find_all("p")]
-
-    for first_paragraph in paragraphs:
-        if first_paragraph.strip():
-            first_word = first_paragraph.lstrip().split()[0].strip(string.punctuation).lower()
-            if first_word == leader_first_name.lower():
-                return first_paragraph
+    for p in paragraphs:
+        if p.find("b"):
+            first_paragraph = p.text.strip()
+            # Removes citations e.g. [4]
+            first_paragraph_cleaned = re.sub(r'\[\d+]', '', first_paragraph).strip()
             
-    return None
+            #checks if arabic script and flips the paragraph around.
+            if is_arabic(first_paragraph_cleaned):
+                first_paragraph_cleaned = first_paragraph_cleaned[::-1]
 
-# print(get_first_paragraph('https://fr.wikipedia.org/wiki/Emmanuel_Macron'))
+            return first_paragraph_cleaned
+    
+    return None
