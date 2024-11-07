@@ -1,4 +1,6 @@
 import requests
+from bs4 import BeautifulSoup
+import string
 
 def get_leaders():
 
@@ -34,3 +36,38 @@ def get_leaders():
             print(req_leaders.status_code, f"Failed to retrieve leaders from: {country_code}")
 
     return leaders_per_country
+
+leaders_per_country = get_leaders()
+# print(leaders_per_country)
+
+def get_first_paragraph(wikipedia_url):
+    leader_first_name = None
+
+    for country_code, leaders in leaders_per_country.items():
+        for leader in leaders:
+            if leader['wikipedia_url'] == wikipedia_url:
+                leader_first_name = leader['first_name']
+                break
+        if leader_first_name:
+                break
+        
+    if not leader_first_name:
+         print("Leader not found for this URL.")
+         return None
+
+    print(wikipedia_url)
+
+    req_leader_wiki_url = requests.get(wikipedia_url)
+    soup = BeautifulSoup(req_leader_wiki_url.content, 'html.parser')
+
+    paragraphs = [p.text for p in soup.find_all("p")]
+
+    for first_paragraph in paragraphs:
+        if first_paragraph.strip():
+            first_word = first_paragraph.lstrip().split()[0].strip(string.punctuation).lower()
+            if first_word == leader_first_name.lower():
+                return first_paragraph
+            
+    return None
+
+# print(get_first_paragraph('https://fr.wikipedia.org/wiki/Emmanuel_Macron'))
