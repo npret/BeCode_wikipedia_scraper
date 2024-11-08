@@ -9,17 +9,14 @@ def get_leaders():
     leaders_url = "/leaders"
     cookie_url = "/cookie"
 
-    #Get cookies
-    req_cookies = requests.get(f"{root_url}/{cookie_url}")
-    cookie = req_cookies.cookies
-
-    # Get countries list: ['us', 'be', 'ma', 'ru', 'fr']
-    req_countries = requests.get(f"{root_url}/{countries_url}", cookies=cookie)
-    countries = req_countries.json()
-
-    # Get leaders from each country and add them to dictionary.
     with requests.Session() as session:
-        
+        session.get(f"{root_url}/{cookie_url}")
+
+        # Get countries list: ['us', 'be', 'ma', 'ru', 'fr']
+        req_countries = session.get(f"{root_url}/{countries_url}")
+        countries = req_countries.json()
+
+        # Get leaders from each country and add them to dictionary.
         leaders_per_country = {}
 
         for country_code in countries:
@@ -28,21 +25,19 @@ def get_leaders():
         
             try:
 
-                req_leaders = requests.get(f"{root_url}/{leaders_url}", params=params, cookies=cookie)
+                req_leaders = session.get(f"{root_url}/{leaders_url}", params=params)
             
                 if req_leaders.status_code == 403:
-                    req_cookies = requests.get(f"{root_url}/{cookie_url}")
-                    cookie = req_cookies.cookies
-                    req_leaders = requests.get(f"{root_url}/{leaders_url}", params=params, cookies=cookie)
+                    session.get(f"{root_url}/{cookie_url}")
+                    req_leaders = session.get(f"{root_url}/{leaders_url}", params=params)
 
-            
                 if req_leaders.status_code == 200:
                     leaders_per_country[country_code] = req_leaders.json()
 
                     for leader in leaders_per_country[country_code]:
                         wikipedia_url = leader.get("wikipedia_url")
                         if wikipedia_url:
-                            first_paragraph = get_first_paragraph(wikipedia_url, session)
+                            first_paragraph = get_first_paragraph(session, wikipedia_url)
                             if first_paragraph:
                                 print(f"{first_paragraph}")
 
@@ -73,6 +68,5 @@ def get_first_paragraph(wikipedia_url, session):
             return first_paragraph_cleaned
     
     return None
-
 
 get_leaders()
